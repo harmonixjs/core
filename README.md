@@ -1,6 +1,6 @@
 # 🤖 Harmonix Framework
 
-[![npm version](https://img.shields.io/npm/v/@harmonixjs/harmonix.svg)](https://www.npmjs.com/package/@harmonixjs/harmonix)
+[![npm version](https://img.shields.io/npm/v/@harmonixjs/core.svg)](https://www.npmjs.com/package/@harmonixjs/core)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -12,7 +12,7 @@ A modern, type-safe Discord.js framework with decorators and advanced features.
 
 - 🎯 **TypeScript-first** with full type safety
 - 🎨 **Decorator-based** commands and events
-- 💾 **Built-in database** support (optional)
+- 📥 **Automatic imports** so you write less and code faster
 - 🔌 **Plugin system** for extensibility
 - 🚀 **Easy to use** but powerful
 - 📦 **Zero config** to get started
@@ -20,7 +20,7 @@ A modern, type-safe Discord.js framework with decorators and advanced features.
 ## 📦 Installation
 
 ```bash
-npm install @harmonixjs/harmonix
+npm install @harmonixjs/core tsx
 npm install --save-dev typescript
 ```
 
@@ -36,11 +36,13 @@ Update `tsconfig.json`:
 ```json
 {
   "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "target": "ES2022",
-    "module": "commonjs",
-    "strict": true
+    "outDir": "dist",
+    "esModuleInterop": true
   }
 }
 ```
@@ -49,7 +51,7 @@ Update `tsconfig.json`:
 
 ```typescript
 // src/index.ts
-import { Harmonix, BotConfig } from "harmonix";
+import { Harmonix, BotConfig } from "@harmonixjs/core";
 
 const botConfig: BotConfig = {
   bot: {
@@ -61,7 +63,8 @@ const botConfig: BotConfig = {
     commands: "./src/commands",
     events: "./src/events",
     components: "./src/components"
-  }
+  },
+  intents: [3249151]
 };
 
 const bot = new Harmonix(botConfig);
@@ -113,13 +116,12 @@ export default class TestButton implements ComponentExecutor<ButtonInteraction> 
 ### 4. Run your bot
 
 ```bash
-npx tsc
-node dist/index.js
+npx tsx src/index.ts
 ```
 
 ## 📚 Documentation
 
-Visit our [documentation](https://github.com/harmonixjs/harmonix/wiki) for detailed guides and API reference.
+<!-- Visit our [documentation](https://github.com/harmonixjs/core/wiki) for detailed guides and API reference. -->
 
 ## 🔌 Plugins (In Development..)
 

@@ -1,5 +1,5 @@
 import { Harmonix } from "../client/Bot";
-import {CommandContext, CommandType} from "../contexts/CommandContext";
+import { CommandContext, CommandType } from "../contexts/CommandContext";
 
 /**
  * Interface for command executors in Harmonix.
@@ -7,7 +7,7 @@ import {CommandContext, CommandType} from "../contexts/CommandContext";
  *
  * @typeParam E - The type of command (default: "slash" | "prefix" | "both")
  */
-export default interface CommandExecutor<E extends CommandType = CommandType> {
+export interface CommandExecutor<E extends CommandType = CommandType> {
     /**
      * Executes the command logic.
      * @param bot - The Harmonix bot instance

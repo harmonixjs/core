@@ -4,7 +4,7 @@ import chalk from "chalk";
 import 'reflect-metadata';
 import { Harmonix } from "../client/Bot";
 import { CommandOptions } from "../decorators/Command";
-import CommandExecutor from "../executors/CommandExecutor";
+import { CommandExecutor } from "../executors/CommandExecutor";
 import { ApplicationCommandType, Collection, PermissionsBitField, REST, Routes } from "discord.js";
 
 export default function RegisterCommands(bot: Harmonix, dir: string) {

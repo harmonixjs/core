@@ -1,5 +1,5 @@
 {
-  "name": "@harmonixjs/harmonix",
+  "name": "@harmonixjs/core",
   "version": "1.0.0",
   "description": "A modern TypeScript-only Discord.js framework with decorators, database integration, and advanced handlers",
   "keywords": [
@@ -20,13 +20,13 @@
     "url": "https://maxence-bessi.com"
   },
   "license": "MIT",
-  "homepage": "https://github.com/harmonixjs/harmonix#readme",
+  "homepage": "https://github.com/harmonixjs/core#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/harmonixjs/harmonix.git"
+    "url": "git+https://github.com/harmonixjs/core.git"
   },
   "bugs": {
-    "url": "https://github.com/harmonixjs/harmonix/issues"
+    "url": "https://github.com/harmonixjs/core/issues"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

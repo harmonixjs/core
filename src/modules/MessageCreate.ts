@@ -2,7 +2,7 @@ import { Events, Message, OmitPartialGroupDMChannel } from "discord.js";
 import { Event } from "../decorators/Event";
 import { EventExecutor } from "../executors/EventExecutor";
 import { Harmonix } from "../client/Bot";
-import CommandExecutor from "../executors/CommandExecutor";
+import { CommandExecutor } from "../executors/CommandExecutor";
 import { CommandContext } from "../contexts/CommandContext";
 
 @Event(Events.MessageCreate)

@@ -8,7 +8,7 @@ import {
  * Interface for auto-completion handlers in Harmonix.
  * Handles the auto-complete logic for slash command options.
  */
-export default interface AutoCompletion {
+export interface AutoCompletion {
     /**
      * Executes the auto-completion logic for a slash command option.
      * @param bot - The Harmonix bot instance
