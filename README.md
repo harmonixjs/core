@@ -51,9 +51,9 @@ Update `tsconfig.json`:
 
 ```typescript
 // src/index.ts
-import { Harmonix, BotConfig } from "@harmonixjs/core";
+import { Harmonix } from "@harmonixjs/core";
 
-const botConfig: BotConfig = {
+const bot = new Harmonix({
   bot: {
     id: "YOUR_BOT_CLIENT_ID",
     token: "YOUR_BOT_TOKEN"
@@ -65,12 +65,10 @@ const botConfig: BotConfig = {
     components: "./src/components"
   },
   intents: [3249151]
-};
-
-const bot = new Harmonix(botConfig);
+});
 
 // Register a plugin
-bot.registerPlugin(...);
+bot.use(...);
 
 // Start listening
 bot.login(botConfig.bot.token);
