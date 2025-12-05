@@ -1,6 +1,6 @@
 {
   "name": "@harmonixjs/core",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A modern TypeScript-only Discord.js framework with decorators, database integration, and advanced handlers",
   "keywords": [
     "discord",

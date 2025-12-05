@@ -4,7 +4,7 @@ const { join } = require('path');
 const projectRoot = process.cwd();
 
 // Ne pas afficher le message si on est dans le node_modules du package lui-même
-if (projectRoot.includes('node_modules/@c1ach0/harmonix')) {
+if (projectRoot.includes('node_modules/@harmonixjs/core')) {
   process.exit(0);
 }
 

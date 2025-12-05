@@ -6,6 +6,7 @@ import { Harmonix } from "../client/Bot";
 import { CommandOptions } from "../decorators/Command";
 import { CommandExecutor } from "../executors/CommandExecutor";
 import { ApplicationCommandType, Collection, PermissionsBitField, REST, Routes } from "discord.js";
+import { CommandType } from "../types/CommandTypes";
 
 export default function RegisterCommands(bot: Harmonix, dir: string) {
     const userDir = resolve(process.cwd(), dir);
@@ -25,7 +26,7 @@ function loadCommand(bot: Harmonix, dir: string) {
         }
 
         if (!file.endsWith(".js") && !file.endsWith(".ts")) return;
-        if(file.endsWith(".d.ts")) return;
+        if (file.endsWith(".d.ts")) return;
 
         const CommandClass = require(filePath).default;
 
@@ -52,7 +53,10 @@ function loadCommand(bot: Harmonix, dir: string) {
         }
 
         type CommandTypeKey = 'slash' | 'prefix';
-        const types: CommandTypeKey[] = commandOptions.type === 'both' ? ['slash', 'prefix'] : [commandOptions.type || 'slash'];
+
+        const type = commandOptions.type as CommandType;
+        const types: CommandTypeKey[] =
+            type === 'both' ? ['slash', 'prefix'] : [type];
 
         types.forEach(type => {
             if (!bot.commands.has(type)) bot.commands.set(type, new Collection());

@@ -1,5 +1,6 @@
 import { Harmonix } from "../client/Bot";
-import { ComponentContext, ComponentEvent } from "../contexts/ComponentContext";
+import { ComponentContext } from "../contexts/ComponentContext";
+import { ComponentType } from "../types/ComponentTypes";
 
 /**
  * Interface for component executors in Harmonix.
@@ -7,7 +8,7 @@ import { ComponentContext, ComponentEvent } from "../contexts/ComponentContext";
  *
  * @typeParam T - The specific component event type
  */
-export interface ComponentExecutor<T extends ComponentEvent = ComponentEvent> {
+export interface ComponentExecutor<T extends ComponentType = ComponentType> {
     /**
      * Executes the component interaction logic.
      * @param bot - The Harmonix bot instance

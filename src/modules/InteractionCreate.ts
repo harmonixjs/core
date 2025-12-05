@@ -2,13 +2,14 @@ import { CacheType, ChatInputCommandInteraction, Collection, Events, Interaction
 import { Harmonix } from "../client/Bot";
 import { Event } from "../decorators/Event";
 import { EventExecutor } from "../executors/EventExecutor";
-import { CommandContext } from "../contexts/CommandContext";
 import { CommandExecutor } from "../executors/CommandExecutor";
 import { AutoCompletion } from "../executors/AutoCompletion";
 import { ComponentContext } from "../contexts/ComponentContext";
 import { ComponentExecutor } from "../executors/ComponentExecutor";
 import { CommandOptions } from "../decorators/Command";
 import { Cooldown } from "../executors/Cooldown";
+import { createCommandContext } from "../helpers/commandHelper";
+import { getComponentType, InferComponentType } from "../types/ComponentTypes";
 
 @Event(Events.InteractionCreate)
 export default class InteractionCreate implements EventExecutor<Events.InteractionCreate> {
@@ -20,11 +21,11 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
     if (interaction.isChatInputCommand()) {
       if (!await this.authorizedToExecute(interaction)) return;
       await this.handleCooldown(interaction);
-      
+
       const command = bot.commands.get('slash')?.get(interaction.commandName);
       if (!command) return;
-      const commandInstance: CommandExecutor = new command();
-      await commandInstance.execute(bot, new CommandContext<ChatInputCommandInteraction>(interaction));
+      const commandInstance: CommandExecutor<'slash'> = new command();
+      await commandInstance.execute(bot, createCommandContext<'slash'>(bot, interaction, 'slash'));
     }
 
     else if (interaction.isAutocomplete()) {
@@ -34,19 +35,26 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
       if (!autoCompletionInstance.autoCompletion) return;
       autoCompletionInstance.autoCompletion(bot, interaction, []);
     }
-
     else if (
       interaction.isButton() ||
       interaction.isStringSelectMenu() ||
       interaction.isUserSelectMenu?.() ||
       interaction.isRoleSelectMenu?.() ||
       interaction.isChannelSelectMenu?.() ||
-      interaction.isMentionableSelectMenu?.()
+      interaction.isMentionableSelectMenu?.() ||
+      interaction.isModalSubmit()
     ) {
       const component = bot.components.get(interaction.customId);
       if (!component) return;
-      const ctx: ComponentContext<typeof interaction> = new ComponentContext<typeof interaction>(interaction);
-      const componentInstance: ComponentExecutor<typeof interaction> = new component();
+      const ctx = new ComponentContext<
+        InferComponentType<typeof interaction>
+      >(
+        this.bot,
+        interaction,
+        getComponentType(interaction),
+        interaction.guild,
+      );
+      const componentInstance: ComponentExecutor = new component();
       await componentInstance.execute(bot, ctx);
     }
   }
@@ -82,8 +90,8 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
 
       if (!interaction.replied && !interaction.deferred) {
         if (hasCooldownExecutor) {
-          const ctx = new CommandContext<ChatInputCommandInteraction>(interaction);
-          const commandInstance: Cooldown<ChatInputCommandInteraction> = new commandClass();
+          const ctx = createCommandContext<'slash'>(this.bot, interaction, 'slash');
+          const commandInstance: Cooldown<'slash'> = new commandClass();
           const result = await commandInstance.cooldown(this.bot, ctx, expiredTimestamp);
           await interaction.reply(result);
         } else {

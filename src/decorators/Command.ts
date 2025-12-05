@@ -4,10 +4,9 @@ import {
     ApplicationCommandOptionType, 
     PermissionResolvable 
 } from 'discord.js';
+import { CommandType } from '../types/CommandTypes';
 
-type CommandType = 'slash' | 'prefix' | 'both';
-
-export interface CommandOptions {
+export interface CommandOptions<T extends CommandType = 'slash'> {
     /**
      * Name of the command (unique identifier)
      */
@@ -20,7 +19,7 @@ export interface CommandOptions {
      * Type of the command (slash, prefix, both)
      * Default: 'slash'
      */
-    type?: CommandType;
+    type?: T;
     /**
      * Cooldown time in microseconds for the command for each user
      */
@@ -71,10 +70,11 @@ export interface Options {
     choices?: APIApplicationCommandOptionChoice<string | number>[];
 }
 
+const COMMAND_METADATA = Symbol('command:metadata');
 
 // Define the _Command decorator
-export function Command(options: CommandOptions): ClassDecorator {
-    return function (target: any) {
+export function Command<T extends CommandType = CommandType>(options: CommandOptions<T>): ClassDecorator {
+    return function <TFunction extends Function>(target: TFunction) {
         const prototype = target.prototype;
 
         if (typeof prototype.execute !== 'function') {
@@ -82,16 +82,25 @@ export function Command(options: CommandOptions): ClassDecorator {
                 `@Command decorator requires an 'execute' method in class ${target.name}\n\n` +
                 'Example:\n' +
                 '@Command({ name: "test", description: "Test command" })\n' +
-                'export default class TestCommand implement CommandExecutor<ChatInputCommandInteraction> {\n' +
-                '  async execute(bot: Bot, ctx: CommandContext<ChatInputCommandInteraction>) {\n' +
+                'export default class TestCommand implement CommandExecutor {\n' +
+                '  async execute(bot: Bot, ctx: CommandContext) {\n' +
                 '    // Your code\n' +
                 '  }\n' +
                 '}'
             );
         }
 
-        Reflect.defineMetadata('command:options', options, target);
+        const commandOptions = {
+            type: 'slash' as T,
+            ...options
+        };
+
+        Reflect.defineMetadata(COMMAND_METADATA, commandOptions, target);
         
         return target;
     };
+}
+
+export function getCommandMetadata(target: any): CommandOptions | undefined {
+  return Reflect.getMetadata(COMMAND_METADATA, target);
 }

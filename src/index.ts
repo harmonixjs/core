@@ -10,7 +10,11 @@ export * from "./handlers/EventHandler";
 export * from "./handlers/CommandHandler";
 export * from "./handlers/ComponentHandler";
 export * from "./executors/CommandExecutor";
+export * from "./executors/ComponentExecutor";
 export * from "./executors/EventExecutor";
+export * from "./helpers/commandHelper";
+export * from "./helpers/componentHelper";
+export * from "./helpers/eventHelper";
 export * from "./structures/ExtendsChannel";
-
-export { Harmonix as default } from "./client/Bot";
+export * from "./types/CommandTypes";
+export * from "./types/ComponentTypes";

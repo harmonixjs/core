@@ -1,19 +1,25 @@
 import 'reflect-metadata';
 import { PermissionResolvable } from 'discord.js';
+import { ComponentType } from '../types/ComponentTypes';
 
-export interface ComponentOptions {
+export interface ComponentOptions<T extends ComponentType = 'button'> {
     /**
      * Component ID (unique identifier)
      */
     id: string;
+    /**
+     * Type of the component
+     * @default 'button'
+     */
+    type?: T;
     /**
      * Permissions requested from the Discord user
      */
     member_permission?: bigint | PermissionResolvable;
 }
 
-export function Component(options: ComponentOptions): ClassDecorator {
-    return function (target: any) {
+export function Component<T extends ComponentType = ComponentType>(options: ComponentOptions<T>): ClassDecorator {
+    return function <TFunction extends Function>(target: TFunction) {
         const prototype = target.prototype;
 
         if (typeof prototype.execute !== 'function') {
@@ -29,7 +35,12 @@ export function Component(options: ComponentOptions): ClassDecorator {
             );
         }
 
-        Reflect.defineMetadata('component:options', options, target);
+        const componentOptions = {
+            type: 'button' as T,
+            ...options
+        };
+
+        Reflect.defineMetadata('component:options', componentOptions, target);
 
         return target;
     }

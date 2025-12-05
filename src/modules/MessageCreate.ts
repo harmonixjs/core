@@ -4,6 +4,7 @@ import { EventExecutor } from "../executors/EventExecutor";
 import { Harmonix } from "../client/Bot";
 import { CommandExecutor } from "../executors/CommandExecutor";
 import { CommandContext } from "../contexts/CommandContext";
+import { createCommandContext } from "../helpers/commandHelper";
 
 @Event(Events.MessageCreate)
 export default class MessageCreate implements EventExecutor<Events.MessageCreate> {
@@ -21,6 +22,6 @@ export default class MessageCreate implements EventExecutor<Events.MessageCreate
         if(!command) return;
 
         const commandInstance: CommandExecutor = new command();
-        commandInstance.execute(bot, new CommandContext<Message<boolean>>(message));
+        commandInstance.execute(bot, createCommandContext<'prefix'>(bot, message, 'prefix', { commandName, prefix }));
     }
 }

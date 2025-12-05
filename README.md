@@ -63,7 +63,7 @@ const bot = new Harmonix({
     events: "./src/events",
     components: "./src/components"
   },
-  intents: [3249151]
+  intents: [3249151] // (All Intents)
 });
 
 // Register a plugin
@@ -81,8 +81,20 @@ bot.login(botConfig.bot.token);
     name: "ping",
     description: "Ping command",
 })
-export default class PingCommand implements CommandExecutor<ChatInputCommandInteraction> {
-    execute(bot: Harmonix, ctx: CommandContext<ChatInputCommandInteraction<CacheType>>) {
+export default class PingCommand implements CommandExecutor {
+    execute(bot: Harmonix, ctx: CommandContext) {
+        ctx.reply("Pong!");
+    }
+}
+
+// src/commands/PingPrefix.ts
+@Command({
+    name: "ping",
+    description: "Ping command",
+    type: 'prefix'
+})
+export default class PingPrefixCommand implements CommandExecutor<"prefix"> {
+    execute(bot: Harmonix, ctx: CommandContext<"prefix">) {
         ctx.reply("Pong!");
     }
 }
@@ -103,9 +115,20 @@ export default class ClientReady implements EventExecutor<Events.ClientReady> {
 @Component({
     id: "test_button"
 })
-export default class TestButton implements ComponentExecutor<ButtonInteraction> {
-    execute(bot: Harmonix, ctx: ComponentContext<ButtonInteraction<CacheType>>) {
+export default class TestButton implements ComponentExecutor {
+    execute(bot: Harmonix, ctx: ComponentContext) {
         ctx.reply("Test button clicked!");
+    }
+}
+
+// src/components/TestSelect.ts
+@Component({
+    id: "test_button"
+    type: "string-select"
+})
+export default class TestSelect implements ComponentExecutor<"string-select"> {
+    execute(bot: Harmonix, ctx: ComponentContext<"string-select">) {
+        //...
     }
 }
 ```

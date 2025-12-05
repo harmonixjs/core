@@ -17,7 +17,7 @@ const botConfig: BotConfig = {
 const bot = new Harmonix(botConfig);
 
 // Register a plugin
-// bot.registerPlugin(...);
+// bot.use(...);
 
 // Start listening
 bot.login(botConfig.bot.token);

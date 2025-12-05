@@ -1,6 +1,7 @@
 import { Harmonix } from "../client/Bot";
-import { CommandContext, CommandType } from "../contexts/CommandContext";
+import { CommandContext } from "../contexts/CommandContext";
 import { InteractionReplyOptions } from "discord.js";
+import { CommandType } from "../types/CommandTypes";
 
 /**
  * Interface for command cooldown handlers in Harmonix.
@@ -8,7 +9,7 @@ import { InteractionReplyOptions } from "discord.js";
  *
  * @typeParam E - The type of command (e.g., "slash", "prefix")
  */
-export interface Cooldown<E extends CommandType> {
+export interface Cooldown<E extends CommandType = 'slash'> {
     /**
      * Called when a command is still on cooldown.
      * @param bot - The Harmonix bot instance
