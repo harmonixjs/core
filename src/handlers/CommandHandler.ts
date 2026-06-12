@@ -11,7 +11,7 @@ import {
     Routes
 } from "discord.js";
 import { Harmonix } from "../client/Bot";
-import { CommandOptions } from "../decorators/Command";
+import { COMMAND_METADATA, CommandOptions } from "../decorators/Command";
 import { CommandExecutor } from "../executors/CommandExecutor";
 import { CommandType } from "../types/CommandTypes";
 
@@ -36,7 +36,7 @@ async function loadCommands(bot: Harmonix, dir: string): Promise<void> {
 
         const CommandClass = require(filePath).default;
         const metadata: CommandOptions<CommandType> | undefined = Reflect.getMetadata(
-            "command:options",
+            COMMAND_METADATA,
             CommandClass
         );
 
@@ -83,7 +83,7 @@ async function routeCommands(client: Harmonix): Promise<void> {
     for (const commandType of ['slash', 'user', 'message'] as const) {
         for (const [name, CommandClass] of client.commands.get(commandType) ?? []) {
             const metadata: CommandOptions<CommandType> = Reflect.getMetadata(
-                "command:options",
+                COMMAND_METADATA,
                 CommandClass
             );
             const applicationType = metadata.applicationType ??

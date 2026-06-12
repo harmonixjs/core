@@ -6,7 +6,7 @@ import { CommandExecutor } from "../executors/CommandExecutor";
 import { AutoCompletion } from "../executors/AutoCompletion";
 import { ComponentContext } from "../contexts/ComponentContext";
 import { ComponentExecutor } from "../executors/ComponentExecutor";
-import { CommandOptions } from "../decorators/Command";
+import { COMMAND_METADATA, CommandOptions } from "../decorators/Command";
 import { Cooldown } from "../executors/Cooldown";
 import { createCommandContext } from "../helpers/commandHelper";
 import { getComponentType, InferComponentType } from "../types/ComponentTypes";
@@ -95,7 +95,7 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
     const commandClass = this.bot.commands.get('slash')?.get(commandName);
     if (!commandClass) return false;
 
-    const commandAnnotation: CommandOptions = Reflect.getMetadata('command:options', commandClass) ?? {};
+    const commandAnnotation: CommandOptions = Reflect.getMetadata(COMMAND_METADATA, commandClass) ?? {};
 
     const userCooldownMs = (commandAnnotation.user_cooldown ?? defaultCooldown) * 1000;
     const guildCooldownMs = (commandAnnotation.guild_cooldown ?? 0) * 1000;
@@ -156,7 +156,7 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
     const commandClass = this.bot.commands.get('slash')?.get(interaction.commandName);
     if (!commandClass) return false;
 
-    const commandOptions: CommandOptions = Reflect.getMetadata('command:options', commandClass) ?? {};
+    const commandOptions: CommandOptions = Reflect.getMetadata(COMMAND_METADATA, commandClass) ?? {};
     if (!commandOptions) return true;
 
     if (commandOptions.member_permission) {

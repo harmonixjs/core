@@ -56,7 +56,7 @@ export interface CommandOptions<T extends CommandType = 'slash'> {
 /** @deprecated Use ApplicationCommandOptionData from discord.js. */
 export type Options = ApplicationCommandOptionData;
 
-const COMMAND_METADATA = Symbol('command:metadata');
+export const COMMAND_METADATA = 'command:options';
 
 type CommandClass<T extends CommandType> =
     abstract new (...args: any[]) => CommandExecutor<T>;
