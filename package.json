@@ -1,6 +1,6 @@
 {
   "name": "@harmonixjs/core",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "A modern TypeScript-only Discord.js framework with decorators, database integration, and advanced handlers",
   "keywords": [
     "discord",
@@ -43,6 +43,10 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
@@ -56,8 +60,8 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "peerDependencies": {
-    "discord.js": "^14.15.0",
-    "typescript": ">=5.0.0"
+    "discord.js": "^14.26.4",
+    "typescript": ">=5.4.0"
   },
   "dependencies": {
     "reflect-metadata": "^0.2.2",
@@ -66,7 +70,7 @@
   "devDependencies": {
     "@types/node": "^20.14.0",
     "@types/ms": "^0.7.34",
-    "discord.js": "^14.15.0",
+    "discord.js": "^14.26.4",
     "typescript": "^5.4.0",
     "prettier": "^3.2.0"
   }

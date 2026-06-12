@@ -9,7 +9,9 @@ import {
     InteractionEditReplyOptions,
     Message,
     RoleSelectMenuInteraction,
-    ChannelSelectMenuInteraction
+    ChannelSelectMenuInteraction,
+    MessageFlags,
+    ModalSubmitInteraction
 } from 'discord.js';
 import { Harmonix } from '../client/Bot';
 import { ComponentType, InferComponentInteraction } from '../types/ComponentTypes';
@@ -98,7 +100,7 @@ export class ComponentContext<T extends ComponentType = 'button'> extends Extend
     async replyEphemeral(content: string): Promise<InteractionResponse> {
         return this.interaction.reply({
             content,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -106,7 +108,9 @@ export class ComponentContext<T extends ComponentType = 'button'> extends Extend
      * Defer the reply to the interaction
      */
     async deferReply(ephemeral: boolean = false): Promise<InteractionResponse> {
-        return this.interaction.deferReply({ ephemeral });
+        return this.interaction.deferReply({
+            flags: ephemeral ? MessageFlags.Ephemeral : undefined
+        });
     }
 
     /**
@@ -275,15 +279,43 @@ export class ComponentContext<T extends ComponentType = 'button'> extends Extend
         return this.interaction.fields.getTextInputValue(customId) || null;
     }
 
+    getRadioGroup(customId: string): string | null {
+        if (!this.isModal()) {
+            throw new Error('getRadioGroup() is only available for modals');
+        }
+        return (this.interaction as ModalSubmitInteraction).fields.getRadioGroup(customId);
+    }
+
+    getCheckboxGroup(customId: string): readonly string[] {
+        if (!this.isModal()) {
+            throw new Error('getCheckboxGroup() is only available for modals');
+        }
+        return (this.interaction as ModalSubmitInteraction).fields.getCheckboxGroup(customId);
+    }
+
+    getCheckbox(customId: string): boolean {
+        if (!this.isModal()) {
+            throw new Error('getCheckbox() is only available for modals');
+        }
+        return (this.interaction as ModalSubmitInteraction).fields.getCheckbox(customId);
+    }
+
+    getUploadedFiles(customId: string) {
+        if (!this.isModal()) {
+            throw new Error('getUploadedFiles() is only available for modals');
+        }
+        return (this.interaction as ModalSubmitInteraction).fields.getUploadedFiles(customId);
+    }
+
     /**
      * Get all the fields in a modal
      */
-    getAllFields(): Map<string, string> {
+    getAllFields(): Map<string, unknown> {
         if (!this.isModal()) {
             throw new Error('getAllFields() is only available for modals');
         }
 
-        const fields = new Map<string, string>();
+        const fields = new Map<string, unknown>();
 
         this.interaction.fields.fields.forEach((field, key) => {
             if ("value" in field) {

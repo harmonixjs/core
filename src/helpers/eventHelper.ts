@@ -1,9 +1,13 @@
 import { ClientEvents } from "discord.js";
 import { Harmonix } from "../client/Bot";
-import { Event } from "../decorators/Event";
+import { CustomEvent, Event } from "../decorators/Event";
+import {
+    HarmonixCustomEvents,
+    HarmonixEventListener
+} from "../events/HarmonixEventEmitter";
 import { EventExecutor } from "../executors/EventExecutor";
 
-export function createEvent<E extends keyof ClientEvents>(
+export function defineEvent<E extends keyof ClientEvents>(
     options: E,
     executor: (bot: Harmonix, ...args: ClientEvents[E]) => Promise<any> | any
 ) {
@@ -13,4 +17,18 @@ export function createEvent<E extends keyof ClientEvents>(
     }
 
     return GeneratedEvent;
+}
+
+export const createEvent = defineEvent;
+
+export function defineCustomEvent<Event extends keyof HarmonixCustomEvents>(
+    event: Event,
+    executor: HarmonixEventListener<HarmonixCustomEvents, Event>
+) {
+    @CustomEvent(event)
+    class GeneratedCustomEvent {
+        execute = executor;
+    }
+
+    return GeneratedCustomEvent;
 }

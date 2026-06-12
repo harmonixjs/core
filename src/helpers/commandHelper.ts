@@ -4,7 +4,7 @@ import { Command, CommandOptions } from "../decorators/Command";
 import { CommandExecutor } from "../executors/CommandExecutor";
 import { CommandType, InferInteractionType } from "../types/CommandTypes";
 
-export function createCommand<T extends CommandType = 'slash'>(
+export function defineCommand<T extends CommandType = 'slash'>(
     options: CommandOptions<T>,
     executor: (bot: Harmonix, ctx: CommandContext<T>) => Promise<any> | any
 ) {
@@ -15,6 +15,8 @@ export function createCommand<T extends CommandType = 'slash'>(
 
     return GeneratedCommand;
 }
+
+export const createCommand = defineCommand;
 
 export function createCommandContext<T extends CommandType>(
   bot: Harmonix,

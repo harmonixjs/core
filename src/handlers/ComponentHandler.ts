@@ -6,49 +6,47 @@ import 'reflect-metadata';
 import { ComponentOptions } from "../decorators/Component";
 import { ComponentExecutor } from "../executors/ComponentExecutor";
 
-export default function RegisterComponent(bot: Harmonix, dir: string) {
-    const userDir = resolve(process.cwd(), dir);
-    loadComponent(bot, userDir)
+export default async function RegisterComponent(bot: Harmonix, dir: string): Promise<void> {
+    await loadComponents(bot, resolve(process.cwd(), dir));
 }
 
-function loadComponent(bot: Harmonix, dir: string) {
-    fs.readdirSync(dir).forEach(async file => {
+async function loadComponents(bot: Harmonix, dir: string): Promise<void> {
+    for (const file of fs.readdirSync(dir)) {
         const filePath = join(dir, file);
         const stat = statSync(filePath);
+
         if (stat.isDirectory()) {
-            loadComponent(bot, filePath);
-            return;
+            await loadComponents(bot, filePath);
+            continue;
         }
 
-        if (!file.endsWith(".js") && !file.endsWith(".ts")) return;
-        if(file.endsWith(".d.ts")) return;
+        if ((!file.endsWith(".js") && !file.endsWith(".ts")) || file.endsWith(".d.ts")) {
+            continue;
+        }
 
         const ComponentClass = (await import(filePath)).default;
-
-        const componentOptions: ComponentOptions = Reflect.getMetadata(
-            "component:options", 
+        const metadata: ComponentOptions | undefined = Reflect.getMetadata(
+            "component:options",
             ComponentClass
         );
 
-        if (!componentOptions) {
+        if (!metadata) {
             console.log(chalk.yellow(`File '${file}' does not have a valid @Component decorator.`));
-            return;
+            continue;
         }
 
-        if(!componentOptions.id) {
-            console.log(chalk.red(`Component in '${file}' is missing an id!`));
-            return;
+        if (!metadata.id) {
+            console.log(chalk.red(`Component in '${file}' is missing an id.`));
+            continue;
         }
 
-        const instace: ComponentExecutor = new ComponentClass();
-
-        if(typeof instace.execute !== "function") {
-            console.log(chalk.red(`Component '${componentOptions.id}' has no execute() method!`));
-            return;
+        const instance: ComponentExecutor = new ComponentClass();
+        if (typeof instance.execute !== "function") {
+            console.log(chalk.red(`Component '${metadata.id}' has no execute() method.`));
+            continue;
         }
 
-        bot.components.set(componentOptions.id, ComponentClass);
-
-        console.log(chalk.green(`Component '${componentOptions.id}' registered.`));
-    })
+        bot.components.set(metadata.id, ComponentClass);
+        console.log(chalk.green(`Component '${metadata.id}' registered.`));
+    }
 }

@@ -12,6 +12,7 @@ export default class MessageCreate implements EventExecutor<Events.MessageCreate
         if(message.author.bot) return;
 
         const prefix = bot.config.bot.prefix;
+        if (!prefix) return;
         if(!message.content.startsWith(prefix)) return;
 
         const args = message.content.slice(prefix.length).trim().split(/ +/);

@@ -6,6 +6,72 @@
 
 A modern, type-safe Discord.js framework with decorators and advanced features.
 
+## Typed decorators without repeated generics
+
+Decorated classes are the primary HarmonixJS API. Create a typed decorator
+definition once, then reuse it for the class and its inferred handler:
+
+```ts
+const GuildCreated = Event(Events.GuildCreate);
+
+@GuildCreated
+export default class GuildCreatedEvent {
+  execute = GuildCreated.handler(async (bot, guild) => {
+    // guild is inferred as Guild
+  });
+}
+
+const Ping = Command({
+  name: "ping",
+  description: "Ping",
+  type: "prefix"
+});
+
+@Ping
+export default class PingCommand {
+  execute = Ping.handler(async (bot, ctx) => {
+    // ctx is inferred as CommandContext<"prefix">
+  });
+}
+```
+
+No `implements EventExecutor<...>` or `implements CommandExecutor<...>` is
+required. The `defineEvent`, `defineCommand`, and `defineComponent` helpers
+remain available as a secondary functional API.
+
+Application events are declared once through module augmentation:
+
+```ts
+declare module "@harmonixjs/core" {
+  interface HarmonixCustomEvents {
+    "guild:configured": [guildId: string, enabled: boolean];
+  }
+}
+
+bot.events.on("guild:configured", (bot, guildId, enabled) => {
+  // bot is always injected as the first argument
+});
+
+await bot.events.emitAsync("guild:configured", guild.id, true);
+```
+
+Providers use the same typed registry pattern:
+
+```ts
+declare module "@harmonixjs/core" {
+  interface HarmonixProviderRegistry {
+    notifications: NotificationProvider;
+  }
+}
+
+const bot = new Harmonix({
+  // ...
+  providers: [new NotificationProvider()]
+});
+
+bot.providers.notifications.send();
+```
+
 ⚠️ **TypeScript Only** - JavaScript is not supported.
 
 ## ✨ Features
@@ -51,6 +117,12 @@ Update `tsconfig.json`:
 ```typescript
 // src/index.ts
 import { Harmonix } from "@harmonixjs/core";
+import { DatabasePlugin } from "@harmonixjs/quick-db";
+
+interface User {
+  id: string;
+  coins: number;
+}
 
 const bot = new Harmonix({
   bot: {
@@ -63,73 +135,57 @@ const bot = new Harmonix({
     events: "./src/events",
     components: "./src/components"
   },
+  plugins: [
+    new DatabasePlugin()
+  ],
   intents: [3249151] // (All Intents)
 });
 
-// Register a plugin
-bot.use(...);
+// The plugin name and type are inferred automatically.
+const users = bot.plugins.database.table<User>("users");
 
 // Start listening
-bot.login(botConfig.bot.token);
+bot.start();
 ```
 
 ### 3. Create a command / event / component
 
 ```typescript
 // src/commands/Ping.ts
-@Command({
-    name: "ping",
-    description: "Ping command",
-})
-export default class PingCommand implements CommandExecutor {
-    execute(bot: Harmonix, ctx: CommandContext) {
-        ctx.reply("Pong!");
-    }
-}
+const Ping = Command({
+  name: "ping",
+  description: "Ping command"
+});
 
-// src/commands/PingPrefix.ts
-@Command({
-    name: "ping",
-    description: "Ping command",
-    type: 'prefix'
-})
-export default class PingPrefixCommand implements CommandExecutor<"prefix"> {
-    execute(bot: Harmonix, ctx: CommandContext<"prefix">) {
-        ctx.reply("Pong!");
-    }
+@Ping
+export default class PingCommand {
+  execute = Ping.handler(async (bot, ctx) => {
+    await ctx.reply(`Pong! ${bot.ws.ping}ms`);
+  });
 }
 ```
 
 ```typescript
 // src/events/Ready.ts
-@Event(Events.ClientReady)
-export default class ClientReady implements EventExecutor<Events.ClientReady> {
-    execute(bot: Harmonix, client: Client<true>) {
-        bot.logger.sendLog("SUCCESS", `Bot is ready! Logged in as ${client.user.tag}`);
-    }
+const Ready = Event(Events.ClientReady);
+
+@Ready
+export default class ClientReady {
+  execute = Ready.handler((bot, client) => {
+    bot.logger.sendLog("SUCCESS", `Bot is ready! Logged in as ${client.user.tag}`);
+  });
 }
 ```
 
 ```typescript
 // src/components/TestButton.ts
-@Component({
-    id: "test_button"
-})
-export default class TestButton implements ComponentExecutor {
-    execute(bot: Harmonix, ctx: ComponentContext) {
-        ctx.reply("Test button clicked!");
-    }
-}
+const TestButton = Component({ id: "test_button" });
 
-// src/components/TestSelect.ts
-@Component({
-    id: "test_button"
-    type: "string-select"
-})
-export default class TestSelect implements ComponentExecutor<"string-select"> {
-    execute(bot: Harmonix, ctx: ComponentContext<"string-select">) {
-        //...
-    }
+@TestButton
+export default class TestButtonComponent {
+  execute = TestButton.handler(async (bot, ctx) => {
+    await ctx.reply("Test button clicked!");
+  });
 }
 ```
 
@@ -147,6 +203,70 @@ npx tsx src/index.ts
 
 Harmonix supports first-class plugins — you can add plugins directly to the framework to register commands, events, middleware, or extend internals.
 
+Official and third-party plugins can augment the typed registry:
+
+```typescript
+export class MyPlugin implements HarmonixPlugin {
+  readonly name = "myPlugin" as const;
+
+  init(bot: Harmonix) {
+    // Initialize the plugin.
+  }
+}
+
+declare module "@harmonixjs/core" {
+  interface HarmonixPluginRegistry {
+    myPlugin: MyPlugin;
+  }
+}
+```
+
+Applications can then use `bot.plugins.myPlugin` without a generic, optional chaining, or a non-null assertion. Accessing a plugin that was not registered throws an explicit runtime error.
+
+### Application command capabilities
+
+Harmonix forwards Discord.js application-command options directly:
+
+```typescript
+import {
+  ApplicationCommandOptionType,
+  ApplicationCommandType,
+  ApplicationIntegrationType,
+  InteractionContextType
+} from "discord.js";
+
+@Command({
+  name: "profile",
+  description: "Display a profile",
+  contexts: [
+    InteractionContextType.Guild,
+    InteractionContextType.BotDM,
+    InteractionContextType.PrivateChannel
+  ],
+  integrationTypes: [
+    ApplicationIntegrationType.GuildInstall,
+    ApplicationIntegrationType.UserInstall
+  ],
+  options: [{
+    name: "user",
+    description: "The user to display",
+    type: ApplicationCommandOptionType.User
+  }]
+})
+```
+
+User and message context commands are also supported:
+
+```typescript
+@Command({
+  name: "View profile",
+  type: "user",
+  applicationType: ApplicationCommandType.User
+})
+```
+
 - **[@harmonixjs/quick-db](https://www.npmjs.com/package/@harmonixjs/quick-db)**: Simple and flexible Quick.db plugin for Harmonix Discord framework.
 - **[@harmonixjs/express](https://www.npmjs.com/package/@harmonixjs/express)**: A powerful Express-based HTTP API plugin for the Harmonix Discord framework.
+- **@harmonixjs/i18n**: Runtime translations and Discord command localization.
+- **@harmonixjs/shard**: Automatic multi-process sharding using Discord's recommended shard count.
 - **[@harmonixjs/image-builder](#plugins)**: Development..

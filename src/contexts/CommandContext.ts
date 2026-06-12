@@ -11,7 +11,9 @@ import {
   MessageReplyOptions,
   Role,
   User,
-  Guild
+  Guild,
+  MessageContextMenuCommandInteraction,
+  UserContextMenuCommandInteraction
 } from "discord.js";
 import { Harmonix } from "../client/Bot";
 import { CommandType, InferInteractionType } from "../types/CommandTypes.js";
@@ -44,7 +46,10 @@ export class CommandContext<T extends CommandType = 'slash'> extends ExtendsChan
 
   get event(): T { return this.type; }
   get currentChannel() { return this.interaction.channel };
-  get user() { return this.interaction.member.user; }
+  get user(): User {
+    if (this.interaction instanceof Message) return this.interaction.author;
+    return this.interaction.user;
+  }
 
   // ============================================
   // MÉTHODES COMMUNES
@@ -96,6 +101,28 @@ export class CommandContext<T extends CommandType = 'slash'> extends ExtendsChan
    */
   isPrefixCommand(): this is CommandContext<'prefix'> {
     return this.interaction instanceof Message;
+  }
+
+  isUserCommand(): this is CommandContext<'user'> {
+    return this.interaction instanceof UserContextMenuCommandInteraction;
+  }
+
+  isMessageCommand(): this is CommandContext<'message'> {
+    return this.interaction instanceof MessageContextMenuCommandInteraction;
+  }
+
+  getTargetUser(): User {
+    if (!this.isUserCommand()) {
+      throw new Error("getTargetUser() is only available for user context commands");
+    }
+    return this.interaction.targetUser;
+  }
+
+  getTargetMessage(): Message {
+    if (!this.isMessageCommand()) {
+      throw new Error("getTargetMessage() is only available for message context commands");
+    }
+    return this.interaction.targetMessage;
   }
 
   // ============================================

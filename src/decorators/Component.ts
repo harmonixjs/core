@@ -1,6 +1,10 @@
 import 'reflect-metadata';
 import { PermissionResolvable } from 'discord.js';
 import { ComponentType } from '../types/ComponentTypes';
+import type {
+    ComponentExecutor,
+    ComponentHandler
+} from '../executors/ComponentExecutor';
 
 export interface ComponentOptions<T extends ComponentType = 'button'> {
     /**
@@ -18,23 +22,18 @@ export interface ComponentOptions<T extends ComponentType = 'button'> {
     member_permission?: bigint | PermissionResolvable;
 }
 
-export function Component<T extends ComponentType = ComponentType>(options: ComponentOptions<T>): ClassDecorator {
-    return function <TFunction extends Function>(target: TFunction) {
-        const prototype = target.prototype;
+type ComponentClass<T extends ComponentType> =
+    abstract new (...args: any[]) => ComponentExecutor<T>;
 
-        if (typeof prototype.execute !== 'function') {
-            throw new TypeError(
-                `@Component decorator requires an 'execute' method in class ${target.name}\n\n` +
-                'Example:\n' +
-                '@Component({ id: "test" })\n' +
-                'export default class TestButton implement ComponentExecutor<InteractionButton> {\n' +
-                '  async execute(bot: Bot, ctx: ComponentContext<InteractionButton>) {\n' +
-                '    // Your code\n' +
-                '  }\n' +
-                '}'
-            );
-        }
+export interface ComponentDecorator<T extends ComponentType> {
+    <Class extends ComponentClass<T>>(target: Class): Class;
+    handler<Handler extends ComponentHandler<T>>(handler: Handler): Handler;
+}
 
+export function Component<T extends ComponentType = 'button'>(
+    options: ComponentOptions<T>
+): ComponentDecorator<T> {
+    const decorator = function <Class extends ComponentClass<T>>(target: Class): Class {
         const componentOptions = {
             type: 'button' as T,
             ...options
@@ -43,5 +42,8 @@ export function Component<T extends ComponentType = ComponentType>(options: Comp
         Reflect.defineMetadata('component:options', componentOptions, target);
 
         return target;
-    }
+    } as ComponentDecorator<T>;
+
+    decorator.handler = handler => handler;
+    return decorator;
 }

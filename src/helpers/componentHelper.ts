@@ -14,7 +14,7 @@ export function createComponentContext<T extends ComponentType>(
   return new ComponentContext(bot, interaction, type, guild);
 }
 
-export function createComponent<T extends ComponentType = 'button'>(
+export function defineComponent<T extends ComponentType = 'button'>(
     options: ComponentOptions<T>,
     executor: (bot: Harmonix, ctx: ComponentContext<T>) => Promise<any> | any
 ) {
@@ -25,3 +25,5 @@ export function createComponent<T extends ComponentType = 'button'>(
 
     return GeneratedComponent;
 }
+
+export const createComponent = defineComponent;

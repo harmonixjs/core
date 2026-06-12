@@ -16,3 +16,6 @@ export interface ComponentExecutor<T extends ComponentType = ComponentType> {
      */
     execute(bot: Harmonix, ctx: ComponentContext<T>): Promise<any> | any;
 }
+
+export type ComponentHandler<T extends ComponentType = ComponentType> =
+    ComponentExecutor<T>["execute"];

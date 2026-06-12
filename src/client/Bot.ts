@@ -9,6 +9,18 @@ import RegisterEvents from "../handlers/EventHandler";
 import RegisterCommands from "../handlers/CommandHandler";
 import RegisterComponent from "../handlers/ComponentHandler";
 import { Logger } from "./Logger";
+import type { ApplicationCommandData } from "discord.js";
+import type { CommandOptions } from "../decorators/Command";
+import type { CommandType } from "../types/CommandTypes";
+import {
+    HarmonixEventEmitter,
+    HarmonixCustomEvents
+} from "../events/HarmonixEventEmitter";
+import {
+    HarmonixProvider,
+    HarmonixProviderRegistry,
+    HarmonixProviders
+} from "../providers/Provider";
 
 export interface BotConfig extends ClientOptions {
     /**
@@ -65,14 +77,38 @@ export interface BotConfig extends ClientOptions {
          */
         components?: string;
     };
+
+    /**
+     * Plugins initialized with the bot.
+     */
+    plugins?: HarmonixPlugin[];
+
+    /**
+     * Application services initialized before handlers and login.
+     */
+    providers?: HarmonixProvider[];
 }
 
-export interface HarmonixPlugin {
+/**
+ * Plugin packages extend this interface through TypeScript module augmentation.
+ *
+ * @example
+ * declare module "@harmonixjs/core" {
+ *   interface HarmonixPluginRegistry {
+ *     database: DatabasePlugin;
+ *   }
+ * }
+ */
+export interface HarmonixPluginRegistry {}
+
+export type HarmonixPlugins = Readonly<HarmonixPluginRegistry>;
+
+export interface HarmonixPlugin<Name extends string = string> {
     /**
      * Unique name of the plugin.
-     * This will be used to access the plugin on the bot (e.g., bot._pluginName)
+     * This is used as the key in bot.plugins.
      */
-    name: string;
+    readonly name: Name;
 
     /**
      * Initialization method called when the plugin is registered.
@@ -80,6 +116,15 @@ export interface HarmonixPlugin {
      * Can perform async operations (e.g., connect to a database)
      */
     init(bot: Harmonix): Promise<void> | void;
+
+    /**
+     * Optionally transform an application command before it is sent to Discord.
+     */
+    transformApplicationCommand?(
+        command: ApplicationCommandData,
+        metadata: CommandOptions<CommandType>,
+        bot: Harmonix
+    ): ApplicationCommandData | Promise<ApplicationCommandData>;
 }
 
 /**
@@ -109,21 +154,28 @@ export interface HarmonixPlugin {
  * 
  * const bot = new Harmonix(botConfig);
  * 
- * // Register a plugin
- * bot.registerPlugin(...);
+ * // Plugins can be registered in BotConfig.plugins or with bot.use(...).
  * 
  * // Start listening
- * bot.login(botConfig.bot.token);
+ * bot.start();
  * ```
  */
 export class Harmonix extends Client {
 
     public readonly config: BotConfig;
+    public readonly plugins: HarmonixPlugins;
+    public readonly providers: HarmonixProviders;
+    public readonly events: HarmonixEventEmitter<HarmonixCustomEvents>;
     public logger: Logger = new Logger();
-    private plugins: Map<string, HarmonixPlugin> = new Map();
-    public commands: Map<'slash' | 'prefix', Collection<string, any>> = new Map([
+    private pluginInstances: Map<string, HarmonixPlugin> = new Map();
+    private pluginInitializations: Promise<void>[] = [];
+    private providerInstances: Map<string, HarmonixProvider> = new Map();
+    private providerInitializations: Promise<void>[] = [];
+    public commands: Map<CommandType, Collection<string, any>> = new Map([
         ['slash', new Collection()],
         ['prefix', new Collection()],
+        ['user', new Collection()],
+        ['message', new Collection()],
     ]);
     public components: Collection<String, any> = new Collection();
     public cooldowns: Collection<String, Collection<String, number>> = new Collection();
@@ -138,14 +190,60 @@ export class Harmonix extends Client {
         }
 
         this.config = config;
+        this.events = new HarmonixEventEmitter(this);
+        this.plugins = new Proxy({} as HarmonixPlugins, {
+            get: (_target, property) => {
+                if (typeof property !== "string") return undefined;
+                return this.requirePlugin(property as keyof HarmonixPluginRegistry);
+            },
+            has: (_target, property) => (
+                typeof property === "string" && this.pluginInstances.has(property)
+            ),
+            ownKeys: () => Array.from(this.pluginInstances.keys()),
+            getOwnPropertyDescriptor: (_target, property) => {
+                if (typeof property !== "string" || !this.pluginInstances.has(property)) {
+                    return undefined;
+                }
+
+                return {
+                    configurable: true,
+                    enumerable: true
+                };
+            }
+        });
+        this.providers = new Proxy({} as HarmonixProviders, {
+            get: (_target, property) => {
+                if (typeof property !== "string") return undefined;
+                return this.requireProvider(property as keyof HarmonixProviderRegistry);
+            },
+            has: (_target, property) => (
+                typeof property === "string" && this.providerInstances.has(property)
+            ),
+            ownKeys: () => Array.from(this.providerInstances.keys()),
+            getOwnPropertyDescriptor: (_target, property) => {
+                if (typeof property !== "string" || !this.providerInstances.has(property)) {
+                    return undefined;
+                }
+
+                return {
+                    configurable: true,
+                    enumerable: true
+                };
+            }
+        });
+
+        config.providers?.forEach(provider => this.provide(provider));
+        config.plugins?.forEach(plugin => this.use(plugin));
     }
 
     /**
      * Start the bot
      */
-    async start() {
-        this.startHandler();
-        this.login(this.config.bot.token);
+    async start(): Promise<void> {
+        await Promise.all(this.providerInitializations);
+        await Promise.all(this.pluginInitializations);
+        await this.startHandler();
+        await this.login(this.config.bot.token);
     }
 
     /**
@@ -162,20 +260,70 @@ export class Harmonix extends Client {
     }
 
     /**
-     * Use a plugin in the bot
-     * Note: Plugin name will be prefixed with "_" to avoid name conflicts
+     * Create an isolated typed event bus that still injects this bot.
+     */
+    createEventEmitter<Events extends {
+        [Event in keyof Events]: readonly unknown[];
+    }>(): HarmonixEventEmitter<Events> {
+        return new HarmonixEventEmitter<Events>(this);
+    }
+
+    /**
+     * Register and initialize an application provider.
+     */
+    provide(provider: HarmonixProvider): this {
+        if (this.providerInstances.has(provider.name)) {
+            throw new Error(`Provider with name '${provider.name}' is already registered.`);
+        }
+
+        this.providerInstances.set(provider.name, provider);
+        try {
+            this.providerInitializations.push(Promise.resolve(provider.init(this)));
+        } catch (error) {
+            this.providerInstances.delete(provider.name);
+            throw error;
+        }
+
+        return this;
+    }
+
+    getProvider<T extends HarmonixProvider>(name: string): T | undefined {
+        return this.providerInstances.get(name) as T | undefined;
+    }
+
+    requireProvider<Name extends keyof HarmonixProviderRegistry>(
+        name: Name
+    ): HarmonixProviderRegistry[Name] {
+        const provider = this.providerInstances.get(name as string);
+        if (!provider) {
+            throw new Error(
+                `Provider '${String(name)}' is not registered. ` +
+                `Add it to BotConfig.providers or call bot.provide(...) first.`
+            );
+        }
+
+        return provider as HarmonixProviderRegistry[Name];
+    }
+
+    /**
+     * Register and initialize a plugin.
      */
     use(plugin: HarmonixPlugin): this {
-        const pluginName = "_" + plugin.name;
-        if (this.plugins.has(pluginName)) {
+        const pluginName = plugin.name;
+        if (this.pluginInstances.has(pluginName)) {
             throw new Error(`Plugin with name '${pluginName}' is already registered.`);
         }
 
-        this.plugins.set(pluginName, plugin);
+        this.pluginInstances.set(pluginName, plugin);
+        (this as any)["_" + pluginName] = plugin;
 
-        (this as any)[pluginName] = plugin;
-
-        plugin.init(this);
+        try {
+            this.pluginInitializations.push(Promise.resolve(plugin.init(this)));
+        } catch (error) {
+            this.pluginInstances.delete(pluginName);
+            delete (this as any)["_" + pluginName];
+            throw error;
+        }
 
         console.log(`Plugin with name '${pluginName}' registered.`);
         return this
@@ -185,12 +333,46 @@ export class Harmonix extends Client {
      * Get a registered plugin by name (without the "_" prefix)
      */
     getPlugin<T extends HarmonixPlugin>(name: string): T | undefined {
-        return this.plugins.get("_" + name) as T | undefined;
+        return this.pluginInstances.get(name) as T | undefined;
     }
 
-    private startHandler() {
-        if (this.config.folders?.events) RegisterEvents(this, this.config.folders.events);
-        if (this.config.folders?.commands) RegisterCommands(this, this.config.folders.commands);
-        if (this.config.folders?.components) RegisterComponent(this, this.config.folders.components);
+    /**
+     * Get a registered plugin with its type inferred from the plugin registry.
+     * Throws when the plugin has not been registered.
+     */
+    requirePlugin<Name extends keyof HarmonixPluginRegistry>(
+        name: Name
+    ): HarmonixPluginRegistry[Name] {
+        const plugin = this.pluginInstances.get(name as string);
+
+        if (!plugin) {
+            throw new Error(
+                `Plugin '${String(name)}' is not registered. ` +
+                `Add it to BotConfig.plugins or call bot.use(...) before accessing it.`
+            );
+        }
+
+        return plugin as HarmonixPluginRegistry[Name];
+    }
+
+    async transformApplicationCommand(
+        command: ApplicationCommandData,
+        metadata: CommandOptions<CommandType>
+    ): Promise<ApplicationCommandData> {
+        let transformed = command;
+
+        for (const plugin of this.pluginInstances.values()) {
+            if (plugin.transformApplicationCommand) {
+                transformed = await plugin.transformApplicationCommand(transformed, metadata, this);
+            }
+        }
+
+        return transformed;
+    }
+
+    private async startHandler(): Promise<void> {
+        if (this.config.folders?.events) await RegisterEvents(this, this.config.folders.events);
+        if (this.config.folders?.commands) await RegisterCommands(this, this.config.folders.commands);
+        if (this.config.folders?.components) await RegisterComponent(this, this.config.folders.components);
     }
 }

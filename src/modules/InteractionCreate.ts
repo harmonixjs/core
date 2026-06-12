@@ -20,12 +20,32 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
 
     if (interaction.isChatInputCommand()) {
       if (!await this.authorizedToExecute(interaction)) return;
-      await this.handleCooldown(interaction);
+      if (!await this.handleCooldown(interaction)) return;
 
       const command = bot.commands.get('slash')?.get(interaction.commandName);
       if (!command) return;
       const commandInstance: CommandExecutor<'slash'> = new command();
       await commandInstance.execute(bot, createCommandContext<'slash'>(bot, interaction, 'slash'));
+    }
+
+    else if (interaction.isUserContextMenuCommand()) {
+      const command = bot.commands.get('user')?.get(interaction.commandName);
+      if (!command) return;
+      const commandInstance: CommandExecutor<'user'> = new command();
+      await commandInstance.execute(
+        bot,
+        createCommandContext<'user'>(bot, interaction, 'user')
+      );
+    }
+
+    else if (interaction.isMessageContextMenuCommand()) {
+      const command = bot.commands.get('message')?.get(interaction.commandName);
+      if (!command) return;
+      const commandInstance: CommandExecutor<'message'> = new command();
+      await commandInstance.execute(
+        bot,
+        createCommandContext<'message'>(bot, interaction, 'message')
+      );
     }
 
     else if (interaction.isAutocomplete()) {
@@ -59,7 +79,7 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
     }
   }
 
-  private async handleCooldown(interaction: ChatInputCommandInteraction) {
+  private async handleCooldown(interaction: ChatInputCommandInteraction): Promise<boolean> {
     const commandName = interaction.commandName;
 
     if (!this.bot.cooldowns.has(commandName)) {
@@ -73,7 +93,7 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
 
     const defaultCooldown = 3;
     const commandClass = this.bot.commands.get('slash')?.get(commandName);
-    if (!commandClass) return;
+    if (!commandClass) return false;
 
     const commandAnnotation: CommandOptions = Reflect.getMetadata('command:options', commandClass) ?? {};
 
@@ -107,7 +127,7 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
       const expirationTime = timestamps.get(userKey)! + userCooldownMs;
       if (now < expirationTime) {
         await sendCooldownReply(expirationTime);
-        return;
+        return false;
       }
     }
 
@@ -115,7 +135,7 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
       const expirationTime = timestamps.get(guildKey)! + guildCooldownMs;
       if (now < expirationTime) {
         await sendCooldownReply(expirationTime);
-        return;
+        return false;
       }
     }
 
@@ -128,6 +148,8 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
       timestamps.set(guildKey, now);
       setTimeout(() => timestamps.delete(guildKey), guildCooldownMs);
     }
+
+    return true;
   }
 
   async authorizedToExecute(interaction: ChatInputCommandInteraction): Promise<boolean> {
@@ -138,10 +160,11 @@ export default class InteractionCreate implements EventExecutor<Events.Interacti
     if (!commandOptions) return true;
 
     if (commandOptions.member_permission) {
-      const member = interaction.guild.members.cache.get(interaction.user.id);
-
-      if (!member.permissions.has(commandOptions.member_permission)) {
-        await interaction.reply({ content: "You do not have permission to use this command.", ephemeral: true });
+      if (!interaction.memberPermissions?.has(commandOptions.member_permission)) {
+        await interaction.reply({
+          content: "You do not have permission to use this command.",
+          flags: MessageFlags.Ephemeral
+        });
         return false;
       }
     }

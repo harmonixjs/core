@@ -15,6 +15,8 @@ export * from "./executors/EventExecutor";
 export * from "./helpers/commandHelper";
 export * from "./helpers/componentHelper";
 export * from "./helpers/eventHelper";
+export * from "./events/HarmonixEventEmitter";
+export * from "./providers/Provider";
 export * from "./structures/ExtendsChannel";
 export * from "./types/CommandTypes";
 export * from "./types/ComponentTypes";

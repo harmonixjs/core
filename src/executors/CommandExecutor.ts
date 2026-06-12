@@ -16,3 +16,6 @@ export interface CommandExecutor<T extends CommandType = CommandType> {
      */
     execute(bot: Harmonix, ctx: CommandContext<T>): Promise<any> | any;
 }
+
+export type CommandHandler<T extends CommandType = CommandType> =
+    CommandExecutor<T>["execute"];

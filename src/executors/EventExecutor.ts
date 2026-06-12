@@ -1,5 +1,6 @@
 import { Harmonix } from "../client/Bot";
 import { ClientEvents } from "discord.js";
+import type { HarmonixCustomEvents } from "../events/HarmonixEventEmitter";
 
 /**
  * Interface for event executors in Harmonix.
@@ -16,3 +17,16 @@ export interface EventExecutor<E extends keyof ClientEvents> {
      */
     execute(bot: Harmonix, ...args: ClientEvents[E]): Promise<any> | any;
 }
+
+export interface CustomEventExecutor<E extends keyof HarmonixCustomEvents> {
+    execute(
+        bot: Harmonix,
+        ...args: HarmonixCustomEvents[E]
+    ): Promise<any> | any;
+}
+
+export type EventHandler<E extends keyof ClientEvents> =
+    EventExecutor<E>["execute"];
+
+export type CustomEventHandler<E extends keyof HarmonixCustomEvents> =
+    CustomEventExecutor<E>["execute"];
